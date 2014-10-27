@@ -67,12 +67,13 @@
 
 (def ^{:doc "Forms to ignore when tracing forms." :private true}
       ignored-form? '#{def quote var try monitor-enter monitor-exit assert})
-    
+
 (defn ^{:private true} tracer
   "This function is called by trace. Prints to standard output, but
 may be rebound to do anything you like. 'name' is optional."
   [name value]
-  (println (str "TRACE" (when name (str " " name)) ": " value)))
+  (println)
+  (println  "TRACE" (when name (str " " name)) ": " value))
 
 (defn trace
   "Sends name (optional) and value to the tracer function, then
@@ -83,17 +84,39 @@ affecting the result."
      (tracer name (pr-str value))
      value))
 
+(defn color-code
+  [n]
+  (str "\033[1;3" (inc (mod n 6)) "m"))
+
+(defn background-color-code
+  [n]
+  (str "\033[4" (mod n 7) "m"))
+
+(def reset-color-code "\033[m")
+
 (defn ^{:private true} trace-indent
   "Returns an indentation string based on *trace-depth*"
   []
-  (apply str (take *trace-depth* (repeat "| "))))
+  (str (color-code *trace-depth*)
+       (apply str (take *trace-depth* (repeat "| ")))
+       reset-color-code)
+  )
+
+(defn args->trace-string
+      [args]
+      (clojure.string/join "\n" (map-indexed #(str (if (= 1 (mod % 2))
+                             ""
+                             (background-color-code 0))
+                         (with-out-str (clojure.pprint/pprint %2))
+                         reset-color-code)
+                   args)))
 
 (defn ^{:skip-wiki true} trace-fn-call
   "Traces a single call to a function f with args. 'name' is the
 symbol name of the function."
   [name f args]
   (let [id (gensym "t")]
-    (tracer id (str (trace-indent) (pr-str (cons name args))))
+    (tracer id (str (trace-indent) name "\n" (args->trace-string args)))
     (let [value (binding [*trace-depth* (inc *trace-depth*)]
                   (apply f args))]
       (tracer id (str (trace-indent) "=> " (pr-str value)))
