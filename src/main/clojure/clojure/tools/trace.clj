@@ -60,7 +60,10 @@
 (ns ^{:author "Stuart Sierra, Michel Salim, Luc Préfontaine, Jonathan Fischer Friberg, Michał Marczyk, Don Jackson"
       :doc "This file defines simple tracing macros to help you see what your code is doing."}
      clojure.tools.trace
-  (:use [clojure.pprint]))
+     (:require [puget.printer :as puget]))
+
+(def pprint puget/cprint)
+(def pprint-str puget/cprint-str)
 
 (def ^{:doc "Current stack depth of traced function calls." :private true :dynamic true}
       *trace-depth* 0)
@@ -103,13 +106,9 @@ affecting the result."
   )
 
 (defn args->trace-string
-      [args]
-      (clojure.string/join "\n" (map-indexed #(str (if (= 1 (mod % 2))
-                             ""
-                             (background-color-code 0))
-                         (with-out-str (clojure.pprint/pprint %2))
-                         reset-color-code)
-                   args)))
+  [args]
+  (clojure.string/join (str "\n" (background-color-code 0) "\n" reset-color-code "\n")
+                       (map #(pprint-str %) args)))
 
 (defn ^{:skip-wiki true} trace-fn-call
   "Traces a single call to a function f with args. 'name' is the
@@ -119,7 +118,7 @@ symbol name of the function."
     (tracer id (str (trace-indent) name "\n" (args->trace-string args)))
     (let [value (binding [*trace-depth* (inc *trace-depth*)]
                   (apply f args))]
-      (tracer id (str (trace-indent) "=> " (pr-str value)))
+      (tracer id (str (trace-indent) "=> " (pprint-str value)))
       value)))
 
 (defmacro deftrace
