@@ -136,13 +136,15 @@ affecting the result."
   []
   (str (color-code *trace-depth*)
        (apply str *trace-depth* (take *trace-depth* (repeat "| ")))
+       " "
        reset-color-code)
   )
 
 (defn args->trace-string
   [args]
-  (clojure.string/join (str "\n" (background-color-code 0) "\n" reset-color-code "\n")
-                       (map #(pprint-str %) args)))
+  (str (clojure.string/join (str "\n" (background-color-code 0) reset-color-code "<---=\n")
+                            (map #(pprint-str %) args))
+       "\n"))
 
 (defn ^{:skip-wiki true} trace-fn-call
   "Traces a single call to a function f with args. 'name' is the
